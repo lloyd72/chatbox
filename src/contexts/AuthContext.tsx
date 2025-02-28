@@ -10,6 +10,7 @@ import { auth } from '../config/firebase.config';
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
+  error: string | null;
   signInAnon: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -27,12 +28,24 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function signInAnon() {
     try {
-      await signInAnonymously(auth);
-    } catch (error) {
-      console.error('Error signing in anonymously:', error);
+      console.log('Attempting anonymous sign in...');
+      const result = await signInAnonymously(auth);
+      if (!result.user) {
+        console.error('No user returned from signInAnonymously');
+        throw new Error('Failed to create anonymous user');
+      }
+      console.log('Anonymous sign in successful:', result.user);
+    } catch (error: any) {
+      console.error('Detailed error during anonymous sign in:', {
+        code: error.code,
+        message: error.message,
+        fullError: error
+      });
+      throw error;
     }
   }
 
@@ -41,24 +54,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signOut(auth);
     } catch (error) {
       console.error('Error signing out:', error);
+      throw error;
     }
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
+    try {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setCurrentUser(user);
+        setLoading(false);
+      }, (error) => {
+        console.error('Auth state change error:', error);
+        setError(error.message);
+        setLoading(false);
+      });
 
-    return unsubscribe;
+      return unsubscribe;
+    } catch (error) {
+      console.error('Auth initialization error:', error);
+      setError('Failed to initialize authentication');
+      setLoading(false);
+    }
   }, []);
 
   const value = {
     currentUser,
     loading,
+    error,
     signInAnon,
     logout
   };
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <AuthContext.Provider value={value}>

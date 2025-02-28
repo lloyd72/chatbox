@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import styled from 'styled-components';
@@ -28,16 +28,31 @@ const LoginButton = styled.button`
   }
 `;
 
+const ErrorMessage = styled.div`
+  color: #dc3545;
+  margin-top: 1rem;
+  text-align: center;
+`;
+
 export default function Login() {
   const { signInAnon } = useAuth();
   const navigate = useNavigate();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleAnonymousLogin = async () => {
     try {
+      setError('');
+      setLoading(true);
+      console.log('Starting anonymous login...');
       await signInAnon();
+      console.log('Login successful, navigating to chat...');
       navigate('/chat');
-    } catch (error) {
-      console.error('Error during anonymous login:', error);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError(error.message || 'Failed to start chat. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -45,9 +60,13 @@ export default function Login() {
     <LoginContainer>
       <h1>Welcome to CampusCare</h1>
       <p>Start an anonymous chat session for support</p>
-      <LoginButton onClick={handleAnonymousLogin}>
-        Start Anonymous Chat
+      <LoginButton 
+        onClick={handleAnonymousLogin}
+        disabled={loading}
+      >
+        {loading ? 'Starting...' : 'Start Anonymous Chat'}
       </LoginButton>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
     </LoginContainer>
   );
 } 
