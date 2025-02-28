@@ -40,8 +40,8 @@ export default function Chat() {
   const [isAIMode, setIsAIMode] = useState(true);
   const [loading, setLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const [isPeerMode, setIsPeerMode] = useState(false);
+  const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -68,12 +68,22 @@ export default function Chat() {
 
   useEffect(scrollToBottom, [messages]);
 
+  const handleMessageReceived = async (message: Message) => {
+    try {
+      await addDoc(collection(db, 'messages'), {
+        ...message,
+        timestamp: Date.now()
+      });
+    } catch (error) {
+      console.error('Error saving peer message:', error);
+    }
+  };
+
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || !currentUser) return;
 
     setLoading(true);
     try {
-      // Add user message
       const userMessage: Omit<Message, 'id'> = {
         text,
         senderId: currentUser.uid,
@@ -86,13 +96,11 @@ export default function Chat() {
 
       if (isAIMode) {
         setIsProcessing(true);
-        // Get AI response
         const aiResponse = await getAIResponse(
           [...messages, { ...userMessage, id: userMessageRef.id }],
           currentUser.uid
         );
 
-        // Add AI message
         await addDoc(collection(db, 'messages'), {
           text: aiResponse,
           senderId: 'ai-assistant',
@@ -115,7 +123,6 @@ export default function Chat() {
 
   useEffect(() => {
     if (!isAIMode && !isPeerMode) {
-      // Initialize peer support when switching from AI mode
       setIsPeerMode(true);
     }
   }, [isAIMode]);
