@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../config/firebase.config';
-import { collection, addDoc, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import styled from 'styled-components';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
@@ -17,11 +17,16 @@ const ChatContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
   background: #ffffff;
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
 `;
 
 const ChatMain = styled.main`
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -48,6 +53,7 @@ export default function Chat() {
 
     const q = query(
       collection(db, 'messages'),
+      where('sessionId', '==', currentUser.uid),
       orderBy('timestamp', 'asc')
     );
 
@@ -87,30 +93,41 @@ export default function Chat() {
       const userMessage: Omit<Message, 'id'> = {
         text,
         senderId: currentUser.uid,
+        sessionId: currentUser.uid,
         timestamp: Date.now(),
         isAI: false,
         isPeerSupporter: false
       };
 
-      const userMessageRef = await addDoc(collection(db, 'messages'), userMessage);
+      await addDoc(collection(db, 'messages'), userMessage);
 
       if (isAIMode) {
         setIsProcessing(true);
-        const aiResponse = await getAIResponse(
-          [...messages, { ...userMessage, id: userMessageRef.id }],
-          currentUser.uid
-        );
-
-        await addDoc(collection(db, 'messages'), {
-          text: aiResponse,
-          senderId: 'ai-assistant',
-          timestamp: Date.now(),
-          isAI: true,
-          isPeerSupporter: false
-        });
+        try {
+          const aiResponse = await getAIResponse(messages, currentUser.uid);
+          
+          await addDoc(collection(db, 'messages'), {
+            text: aiResponse,
+            senderId: 'ai-assistant',
+            sessionId: currentUser.uid,
+            timestamp: Date.now(),
+            isAI: true,
+            isPeerSupporter: false
+          });
+        } catch (error) {
+          console.error('Error getting AI response:', error);
+          await addDoc(collection(db, 'messages'), {
+            text: "I'm sorry, I'm having trouble responding right now. Please try again.",
+            senderId: 'ai-assistant',
+            sessionId: currentUser.uid,
+            timestamp: Date.now(),
+            isAI: true,
+            isPeerSupporter: false
+          });
+        }
       }
     } catch (error) {
-      console.error('Error in chat:', error);
+      console.error('Error sending message:', error);
     } finally {
       setLoading(false);
       setIsProcessing(false);

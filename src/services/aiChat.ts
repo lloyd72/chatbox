@@ -8,16 +8,33 @@ export const getAIResponse = async (
   currentUserId: string
 ): Promise<string> => {
   try {
+    console.log('Sending request to AI service:', {
+      url: `${API_URL}/api/chat/ai`,
+      messages: messages.length,
+      userId: currentUserId
+    });
+
     const response = await axios.post(`${API_URL}/api/chat/ai`, {
       messages: messages.map(msg => ({
         role: msg.senderId === currentUserId ? 'user' : 'assistant',
         content: msg.text
-      }))
+      })),
+      userId: currentUserId
     });
     
+    console.log('AI service response:', response.data);
+
+    if (!response.data.message) {
+      throw new Error('No response from AI service');
+    }
+    
     return response.data.message;
-  } catch (error) {
-    console.error('Error getting AI response:', error);
-    throw new Error('Failed to get AI response');
+  } catch (error: any) {
+    console.error('Detailed AI response error:', {
+      error: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    throw new Error(error.response?.data?.error || 'Failed to get AI response');
   }
 }; 
