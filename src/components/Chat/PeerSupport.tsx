@@ -9,8 +9,8 @@ interface PeerSupportProps {
 }
 
 export default function PeerSupport({ onMessageReceived }: PeerSupportProps) {
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [isPeerConnected, setIsPeerConnected] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [isPeerConnected, setIsPeerConnected] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
   const { currentUser } = useAuth();
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function PeerSupport({ onMessageReceived }: PeerSupportProps) {
     return () => {
       newSocket.disconnect();
     };
-  }, [currentUser]);
+  }, [currentUser, onMessageReceived]);
 
   return null; // This component handles socket logic only
 } 

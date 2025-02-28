@@ -1,13 +1,11 @@
 import { Request, Response } from 'express';
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
 import { analyzeEmotion } from '../utils/emotionAnalysis';
 import { getResourcesByEmotion } from '../utils/resourceManager';
 
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-const openai = new OpenAIApi(configuration);
 
 // System message to guide AI responses
 const SYSTEM_MESSAGE = {
@@ -42,7 +40,7 @@ export const getAIResponse = async (req: Request, res: Response) => {
     // Get relevant resources based on emotion
     const relevantResources = getResourcesByEmotion(emotion);
 
-    const completion = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         SYSTEM_MESSAGE,
@@ -57,7 +55,7 @@ export const getAIResponse = async (req: Request, res: Response) => {
       presence_penalty: 0.6,
     });
 
-    const aiResponse = completion.data.choices[0]?.message?.content;
+    const aiResponse = completion.choices[0]?.message?.content;
 
     if (!aiResponse) {
       throw new Error('No response from AI');
