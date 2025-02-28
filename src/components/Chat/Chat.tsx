@@ -8,6 +8,7 @@ import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import { Message } from '../../types/chat';
 import { getAIResponse } from '../../services/aiChat';
+import PeerSupport from './PeerSupport';
 
 const ChatContainer = styled.div`
   display: flex;
@@ -40,6 +41,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const [isPeerMode, setIsPeerMode] = useState(false);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -111,6 +113,13 @@ export default function Chat() {
     setIsAIMode(!isAIMode);
   };
 
+  useEffect(() => {
+    if (!isAIMode && !isPeerMode) {
+      // Initialize peer support when switching from AI mode
+      setIsPeerMode(true);
+    }
+  }, [isAIMode]);
+
   return (
     <ChatContainer>
       <ChatHeader 
@@ -118,6 +127,7 @@ export default function Chat() {
         onToggleMode={toggleChatMode} 
       />
       <ChatMain>
+        {!isAIMode && <PeerSupport onMessageReceived={handleMessageReceived} />}
         <MessageList 
           messages={messages} 
           currentUserId={currentUser?.uid || ''} 
